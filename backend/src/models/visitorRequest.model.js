@@ -78,6 +78,37 @@ const visitorRequestSchema = new mongoose.Schema(
     reviewedAt: {
       type: Date,
       default: null
+    },
+    emailLogs: {
+      type: [
+        {
+          type: {
+            type: String,
+            required: true,
+            trim: true
+          },
+          status: {
+            type: String,
+            enum: ['sent', 'failed'],
+            required: true
+          },
+          recipient: {
+            type: String,
+            trim: true,
+            default: ''
+          },
+          message: {
+            type: String,
+            trim: true,
+            default: ''
+          },
+          timestamp: {
+            type: Date,
+            default: Date.now
+          }
+        }
+      ],
+      default: []
     }
   },
   {

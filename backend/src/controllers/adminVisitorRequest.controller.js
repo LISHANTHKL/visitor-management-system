@@ -1,9 +1,10 @@
 import mongoose from 'mongoose';
 import { VisitorRequest, VISITOR_REQUEST_STATUS } from '../models/visitorRequest.model.js';
 import { getVisitDateRange } from '../utils/visitSlots.js';
+import { queueVisitorRequestEmail } from '../utils/emailQueue.js';
 
 const requestFields =
-  'visitorName visitorEmail visitorPhone employeeId employeeName designation department cabinNumber purpose visitDate visitTime status rejectionReason reviewedBy reviewedAt createdAt updatedAt';
+  'visitorName visitorEmail visitorPhone employeeId employeeName designation department cabinNumber purpose visitDate visitTime status rejectionReason reviewedBy reviewedAt emailLogs createdAt updatedAt';
 
 const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
@@ -123,6 +124,11 @@ export const approveVisitorRequest = async (req, res, next) => {
     request.reviewedAt = new Date();
     await request.save();
 
+    queueVisitorRequestEmail({
+      request,
+      type: 'requestApproved'
+    });
+
     return res.status(200).json({
       success: true,
       message: 'Visitor request approved successfully',
@@ -161,6 +167,11 @@ export const rejectVisitorRequest = async (req, res, next) => {
     request.reviewedBy = req.user._id;
     request.reviewedAt = new Date();
     await request.save();
+
+    queueVisitorRequestEmail({
+      request,
+      type: 'requestRejected'
+    });
 
     return res.status(200).json({
       success: true,

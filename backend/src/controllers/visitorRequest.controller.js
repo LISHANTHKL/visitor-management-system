@@ -7,6 +7,7 @@ import {
   isValidVisitSlot,
   UNAVAILABLE_VISITOR_REQUEST_STATUSES
 } from '../utils/visitSlots.js';
+import { queueVisitorRequestEmail } from '../utils/emailQueue.js';
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const phonePattern = /^[0-9+\-\s()]{7,20}$/;
@@ -156,6 +157,11 @@ export const createVisitorRequest = async (req, res, next) => {
       purpose,
       visitDate: dateRange.start,
       visitTime
+    });
+
+    queueVisitorRequestEmail({
+      request,
+      type: 'requestSubmitted'
     });
 
     return res.status(201).json({
