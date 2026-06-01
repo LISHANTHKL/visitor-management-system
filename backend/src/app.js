@@ -14,7 +14,12 @@ app.use(express.urlencoded({ extended: true }));
 if (env.nodeEnv !== 'test') {
   app.use(morgan('dev'));
 }
-
+app.get('/test', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Render is using latest code'
+  });
+});
 app.use('/api', routes);
 app.use(notFoundHandler);
 app.use(errorHandler);
