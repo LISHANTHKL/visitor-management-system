@@ -19,13 +19,15 @@ import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import LogoutIcon from '@mui/icons-material/Logout';
 import MonitorHeartIcon from '@mui/icons-material/MonitorHeart';
+import PeopleAltIcon from '@mui/icons-material/PeopleAlt';
 import { useAppDispatch } from '../hooks/useAppDispatch.js';
 import { useAppSelector } from '../hooks/useAppSelector.js';
 import { logout } from '../store/authSlice.js';
 
 const navItems = [
   { label: 'Dashboard', path: '/', icon: <DashboardIcon fontSize="small" /> },
-  { label: 'Health', path: '/health', icon: <MonitorHeartIcon fontSize="small" /> }
+  { label: 'Health', path: '/health', icon: <MonitorHeartIcon fontSize="small" /> },
+  { label: 'Users', path: '/admin/users', icon: <PeopleAltIcon fontSize="small" />, roles: ['admin'] }
 ];
 
 const roleLabels = {
@@ -80,24 +82,26 @@ const MainLayout = () => {
           </Typography>
 
           <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap" sx={{ flex: 1 }}>
-            {navItems.map((item) => (
-              <Button
-                key={item.path}
-                component={NavLink}
-                to={item.path}
-                end={item.path === '/'}
-                startIcon={item.icon}
-                sx={{
-                  color: 'text.secondary',
-                  '&.active': {
-                    color: 'primary.main',
-                    bgcolor: 'primary.light'
-                  }
-                }}
-              >
-                {item.label}
-              </Button>
-            ))}
+            {navItems
+              .filter((item) => !item.roles || item.roles.includes(user?.role))
+              .map((item) => (
+                <Button
+                  key={item.path}
+                  component={NavLink}
+                  to={item.path}
+                  end={item.path === '/'}
+                  startIcon={item.icon}
+                  sx={{
+                    color: 'text.secondary',
+                    '&.active': {
+                      color: 'primary.main',
+                      bgcolor: 'primary.light'
+                    }
+                  }}
+                >
+                  {item.label}
+                </Button>
+              ))}
           </Stack>
 
           <Stack direction="row" alignItems="center" spacing={1.5}>

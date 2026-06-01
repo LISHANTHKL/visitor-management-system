@@ -1,6 +1,7 @@
 import { createBrowserRouter } from 'react-router-dom';
 import ProtectedRoute from '../components/ProtectedRoute.jsx';
 import RoleProtectedRoute from '../components/RoleProtectedRoute.jsx';
+import AdminUsersPage from '../pages/AdminUsersPage.jsx';
 import MainLayout from '../layouts/MainLayout.jsx';
 import DashboardPage from '../pages/DashboardPage.jsx';
 import HealthPage from '../pages/HealthPage.jsx';
@@ -34,6 +35,15 @@ export const router = createBrowserRouter([
               {
                 path: 'health',
                 element: <HealthPage />
+              }
+            ]
+          },
+          {
+            element: <RoleProtectedRoute allowedRoles={['admin']} />,
+            children: [
+              {
+                path: 'admin/users',
+                element: <AdminUsersPage />
               }
             ]
           }
