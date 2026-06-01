@@ -44,7 +44,7 @@ const navItems = [
   },
   {
     label: 'QR Scanner',
-    path: '/security',
+    path: '/security/scan',
     icon: <QrCodeScannerIcon fontSize="small" />,
     roles: ['security']
   },

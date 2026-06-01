@@ -1,4 +1,4 @@
-import { createBrowserRouter } from 'react-router-dom';
+import { createBrowserRouter, Navigate } from 'react-router-dom';
 import ProtectedRoute from '../components/ProtectedRoute.jsx';
 import RoleHomeRoute from '../components/RoleHomeRoute.jsx';
 import RoleProtectedRoute from '../components/RoleProtectedRoute.jsx';
@@ -57,6 +57,10 @@ export const router = createBrowserRouter([
             children: [
               {
                 path: 'security',
+                element: <Navigate to="/security/scan" replace />
+              },
+              {
+                path: 'security/scan',
                 element: <SecurityScannerPage />
               },
               {

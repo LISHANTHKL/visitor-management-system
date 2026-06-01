@@ -4,7 +4,7 @@ import DashboardPage from '../pages/DashboardPage.jsx';
 
 const roleHomePaths = {
   employee: '/employee/visitors',
-  security: '/security'
+  security: '/security/scan'
 };
 
 const RoleHomeRoute = () => {
