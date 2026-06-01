@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Box,
@@ -9,6 +9,7 @@ import {
   List,
   ListItem,
   ListItemText,
+  MenuItem,
   Paper,
   Stack,
   TextField,
@@ -16,7 +17,7 @@ import {
 } from '@mui/material';
 import SendIcon from '@mui/icons-material/Send';
 import EmployeeSearch from '../components/EmployeeSearch.jsx';
-import { createVisitorRequest } from '../services/visitorRequestService.js';
+import { createVisitorRequest, getAvailableSlots } from '../services/visitorRequestService.js';
 
 const initialForm = {
   visitorName: '',
@@ -39,14 +40,80 @@ const guidelines = [
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const phonePattern = /^[0-9+\-\s()]{7,20}$/;
 
+const formatSlotLabel = (slot) => {
+  const [hourValue, minuteValue] = slot.split(':').map(Number);
+  const suffix = hourValue >= 12 ? 'PM' : 'AM';
+  const hour = hourValue % 12 || 12;
+  return `${String(hour).padStart(2, '0')}:${String(minuteValue).padStart(2, '0')} ${suffix}`;
+};
+
 const VisitorRequestPage = () => {
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [formData, setFormData] = useState(initialForm);
+  const [availableSlots, setAvailableSlots] = useState([]);
+  const [bookedSlots, setBookedSlots] = useState([]);
+  const [isLoadingSlots, setIsLoadingSlots] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [slotError, setSlotError] = useState('');
   const [success, setSuccess] = useState('');
 
   const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const bookedSlotSet = useMemo(() => new Set(bookedSlots), [bookedSlots]);
+  const slotOptions = useMemo(
+    () => [...new Set([...availableSlots, ...bookedSlots])].sort(),
+    [availableSlots, bookedSlots]
+  );
+
+  useEffect(() => {
+    setFormData((current) => ({
+      ...current,
+      visitTime: ''
+    }));
+
+    if (!selectedEmployee || !formData.visitDate) {
+      setAvailableSlots([]);
+      setBookedSlots([]);
+      setIsLoadingSlots(false);
+      setSlotError('');
+      return undefined;
+    }
+
+    let isActive = true;
+
+    const loadSlots = async () => {
+      setIsLoadingSlots(true);
+      setSlotError('');
+
+      try {
+        const data = await getAvailableSlots({
+          employeeId: selectedEmployee._id,
+          date: formData.visitDate
+        });
+
+        if (isActive) {
+          setAvailableSlots(data.availableSlots || []);
+          setBookedSlots(data.bookedSlots || []);
+        }
+      } catch (requestError) {
+        if (isActive) {
+          setAvailableSlots([]);
+          setBookedSlots([]);
+          setSlotError(requestError.response?.data?.message || 'Unable to load available slots');
+        }
+      } finally {
+        if (isActive) {
+          setIsLoadingSlots(false);
+        }
+      }
+    };
+
+    loadSlots();
+
+    return () => {
+      isActive = false;
+    };
+  }, [selectedEmployee, formData.visitDate]);
 
   const handleChange = (event) => {
     setFormData((current) => ({
@@ -63,6 +130,9 @@ const VisitorRequestPage = () => {
     if (!formData.purpose.trim()) return 'Purpose is required';
     if (!formData.visitDate) return 'Visit date is required';
     if (!formData.visitTime) return 'Visit time is required';
+    if (bookedSlotSet.has(formData.visitTime)) {
+      return 'Selected slot is no longer available. Please choose another slot.';
+    }
 
     return '';
   };
@@ -186,13 +256,33 @@ const VisitorRequestPage = () => {
                       <TextField
                         label="Visit Time"
                         name="visitTime"
-                        type="time"
                         value={formData.visitTime}
                         onChange={handleChange}
                         required
                         fullWidth
-                        InputLabelProps={{ shrink: true }}
-                      />
+                        select
+                        error={Boolean(slotError)}
+                        disabled={!selectedEmployee || !formData.visitDate || isLoadingSlots || slotOptions.length === 0}
+                        helperText={
+                          slotError ||
+                          (!selectedEmployee || !formData.visitDate
+                            ? 'Select an employee and date first'
+                            : isLoadingSlots
+                              ? 'Loading available slots...'
+                              : availableSlots.length === 0
+                                ? 'No available slots for this date'
+                                : '')
+                        }
+                      >
+                        <MenuItem value="" disabled>
+                          Select a slot
+                        </MenuItem>
+                        {slotOptions.map((slot) => (
+                          <MenuItem key={slot} value={slot} disabled={bookedSlotSet.has(slot)}>
+                            {formatSlotLabel(slot)}
+                          </MenuItem>
+                        ))}
+                      </TextField>
                     </Grid>
                     <Grid size={{ xs: 12 }}>
                       <TextField
@@ -214,7 +304,7 @@ const VisitorRequestPage = () => {
                     variant="contained"
                     size="large"
                     startIcon={isSubmitting ? <CircularProgress color="inherit" size={16} /> : <SendIcon />}
-                    disabled={isSubmitting}
+                    disabled={isSubmitting || isLoadingSlots}
                     sx={{ alignSelf: 'flex-start' }}
                   >
                     {isSubmitting ? 'Submitting...' : 'Submit Request'}
@@ -230,4 +320,3 @@ const VisitorRequestPage = () => {
 };
 
 export default VisitorRequestPage;
-

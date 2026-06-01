@@ -1,13 +1,33 @@
 import mongoose from 'mongoose';
 import { User } from '../models/user.model.js';
 import { VisitorRequest } from '../models/visitorRequest.model.js';
+import {
+  generateVisitSlots,
+  getVisitDateRange,
+  isValidVisitSlot,
+  UNAVAILABLE_VISITOR_REQUEST_STATUSES
+} from '../utils/visitSlots.js';
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const phonePattern = /^[0-9+\-\s()]{7,20}$/;
-const timePattern = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 const requestFields =
   'visitorName visitorEmail visitorPhone employeeId employeeName designation department cabinNumber purpose visitDate visitTime status createdAt updatedAt';
+
+const getBookedSlots = async (employeeId, dateRange) => {
+  const bookedRequests = await VisitorRequest.find({
+    employeeId,
+    visitDate: {
+      $gte: dateRange.start,
+      $lt: dateRange.end
+    },
+    status: {
+      $in: UNAVAILABLE_VISITOR_REQUEST_STATUSES
+    }
+  }).select('visitTime');
+
+  return [...new Set(bookedRequests.map((request) => request.visitTime).filter(isValidVisitSlot))];
+};
 
 const getValidationError = ({ visitorName, visitorEmail, visitorPhone, employeeId, purpose, visitDate, visitTime }) => {
   if (!visitorName?.trim()) return 'Visitor name is required';
@@ -15,10 +35,61 @@ const getValidationError = ({ visitorName, visitorEmail, visitorPhone, employeeI
   if (!visitorPhone?.trim() || !phonePattern.test(visitorPhone)) return 'A valid visitor phone is required';
   if (!mongoose.Types.ObjectId.isValid(employeeId)) return 'A valid employee is required';
   if (!purpose?.trim()) return 'Purpose is required';
-  if (!visitDate || Number.isNaN(new Date(visitDate).getTime())) return 'A valid visit date is required';
-  if (!visitTime?.trim() || !timePattern.test(visitTime)) return 'Visit time must use HH:mm format';
+  if (!getVisitDateRange(visitDate)) return 'A valid visit date is required';
+  if (!visitTime?.trim() || !isValidVisitSlot(visitTime)) return 'Visit time must be a valid 15-minute office slot';
 
   return null;
+};
+
+export const getAvailableSlots = async (req, res, next) => {
+  try {
+    const { employeeId, date } = req.query;
+
+    if (!mongoose.Types.ObjectId.isValid(employeeId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'A valid employee is required'
+      });
+    }
+
+    const dateRange = getVisitDateRange(date);
+
+    if (!dateRange) {
+      return res.status(400).json({
+        success: false,
+        message: 'A valid date is required'
+      });
+    }
+
+    const employee = await User.findOne({
+      _id: employeeId,
+      role: 'employee',
+      active: true
+    }).select('_id');
+
+    if (!employee) {
+      return res.status(404).json({
+        success: false,
+        message: 'Selected employee is not available'
+      });
+    }
+
+    const allSlots = generateVisitSlots();
+    const bookedSlots = await getBookedSlots(employee._id, dateRange);
+    const bookedSlotSet = new Set(bookedSlots);
+    const availableSlots = allSlots.filter((slot) => !bookedSlotSet.has(slot));
+
+    return res.status(200).json({
+      success: true,
+      message: 'Available slots loaded successfully',
+      data: {
+        availableSlots,
+        bookedSlots
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
 };
 
 export const createVisitorRequest = async (req, res, next) => {
@@ -63,6 +134,16 @@ export const createVisitorRequest = async (req, res, next) => {
       });
     }
 
+    const dateRange = getVisitDateRange(visitDate);
+    const bookedSlots = await getBookedSlots(employee._id, dateRange);
+
+    if (bookedSlots.includes(visitTime)) {
+      return res.status(409).json({
+        success: false,
+        message: 'Selected slot is no longer available. Please choose another slot.'
+      });
+    }
+
     const request = await VisitorRequest.create({
       visitorName,
       visitorEmail: visitorEmail.toLowerCase().trim(),
@@ -73,7 +154,7 @@ export const createVisitorRequest = async (req, res, next) => {
       department: employee.department,
       cabinNumber: employee.cabinNumber,
       purpose,
-      visitDate,
+      visitDate: dateRange.start,
       visitTime
     });
 
@@ -120,4 +201,3 @@ export const getVisitorRequestById = async (req, res, next) => {
     next(error);
   }
 };
-

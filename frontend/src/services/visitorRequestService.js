@@ -14,8 +14,17 @@ export const createVisitorRequest = async (payload) => {
   return response.data.data;
 };
 
+export const getAvailableSlots = async ({ employeeId, date }) => {
+  const response = await api.get('/visitor-requests/available-slots', {
+    params: {
+      employeeId,
+      date
+    }
+  });
+  return response.data.data;
+};
+
 export const getVisitorRequestById = async (requestId) => {
   const response = await api.get(`/visitor-requests/${requestId}`);
   return response.data.data;
 };
-

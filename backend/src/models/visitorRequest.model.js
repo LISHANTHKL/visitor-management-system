@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 
-export const VISITOR_REQUEST_STATUS = ['pending'];
+export const VISITOR_REQUEST_STATUS = ['pending', 'approved'];
 
 const visitorRequestSchema = new mongoose.Schema(
   {
@@ -74,4 +74,3 @@ const visitorRequestSchema = new mongoose.Schema(
 visitorRequestSchema.index({ employeeId: 1, visitDate: 1, visitTime: 1 });
 
 export const VisitorRequest = mongoose.model('VisitorRequest', visitorRequestSchema);
-
