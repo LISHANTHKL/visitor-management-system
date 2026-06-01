@@ -18,7 +18,8 @@ const startServer = async () => {
     });
 
     initSocket(io);
-
+    console.log('CORS_ORIGIN:', env.corsOrigin);
+    console.log('FRONTEND_URL:', env.frontendUrl);
     httpServer.listen(env.port, () => {
       console.log(`Server running in ${env.nodeEnv} mode on port ${env.port}`);
     });
