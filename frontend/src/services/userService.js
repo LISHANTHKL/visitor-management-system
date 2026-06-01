@@ -5,11 +5,13 @@ export const createUser = async (payload) => {
   return response.data.data;
 };
 
-export const getUsers = async ({ search = '', role = '' } = {}) => {
+export const getUsers = async ({ search = '', role = '', department = '', designation = '' } = {}) => {
   const response = await api.get('/users', {
     params: {
       search,
-      role
+      role,
+      department,
+      designation
     }
   });
   return response.data.data;

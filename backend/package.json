@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
-    "seed:admin": "node src/utils/seedAdmin.js"
+    "seed:admin": "node src/utils/seedAdmin.js",
+    "migrate:employee-profile": "node src/utils/migrateEmployeeProfileFields.js"
   },
   "dependencies": {
     "bcrypt": "^5.1.1",

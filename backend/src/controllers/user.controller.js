@@ -1,11 +1,28 @@
 import mongoose from 'mongoose';
 import { User, USER_ROLES } from '../models/user.model.js';
 
-const userFields = 'name email role department phone active createdAt updatedAt';
+const userFields =
+  'name email role department designation cabinNumber employeeCode officeLocation phone active createdAt updatedAt';
 
 const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 const isValidUserId = (id) => mongoose.Types.ObjectId.isValid(id);
+
+const validateEmployeeProfile = ({ role, designation, cabinNumber }) => {
+  if (role !== 'employee') {
+    return null;
+  }
+
+  if (!designation?.trim()) {
+    return 'Designation is required for employee users';
+  }
+
+  if (!cabinNumber?.trim()) {
+    return 'Cabin number is required for employee users';
+  }
+
+  return null;
+};
 
 const getUserOrNotFound = async (id) => {
   if (!isValidUserId(id)) {
@@ -27,11 +44,19 @@ const getUserOrNotFound = async (id) => {
 
 export const getUsers = async (req, res, next) => {
   try {
-    const { search = '', role = '' } = req.query;
+    const { search = '', role = '', department = '', designation = '' } = req.query;
     const query = {};
 
     if (role && USER_ROLES.includes(role)) {
       query.role = role;
+    }
+
+    if (department.trim()) {
+      query.department = new RegExp(escapeRegex(department.trim()), 'i');
+    }
+
+    if (designation.trim()) {
+      query.designation = new RegExp(escapeRegex(designation.trim()), 'i');
     }
 
     if (search.trim()) {
@@ -40,6 +65,10 @@ export const getUsers = async (req, res, next) => {
         { name: searchRegex },
         { email: searchRegex },
         { department: searchRegex },
+        { designation: searchRegex },
+        { cabinNumber: searchRegex },
+        { employeeCode: searchRegex },
+        { officeLocation: searchRegex },
         { phone: searchRegex }
       ];
     }
@@ -77,7 +106,18 @@ export const getUserById = async (req, res, next) => {
 export const updateUser = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { name, email, role, department, phone, active } = req.body;
+    const {
+      name,
+      email,
+      role,
+      department,
+      designation,
+      cabinNumber,
+      employeeCode,
+      officeLocation,
+      phone,
+      active
+    } = req.body;
 
     if (!isValidUserId(id)) {
       return res.status(400).json({
@@ -107,19 +147,48 @@ export const updateUser = async (req, res, next) => {
       });
     }
 
+    const existingUser = await User.findById(id).select(userFields);
+
+    if (!existingUser) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    const nextRole = typeof role !== 'undefined' ? role : existingUser.role;
+    const nextDesignation = typeof designation !== 'undefined' ? designation : existingUser.designation;
+    const nextCabinNumber = typeof cabinNumber !== 'undefined' ? cabinNumber : existingUser.cabinNumber;
+    const employeeProfileError = validateEmployeeProfile({
+      role: nextRole,
+      designation: nextDesignation,
+      cabinNumber: nextCabinNumber
+    });
+
+    if (employeeProfileError) {
+      return res.status(400).json({
+        success: false,
+        message: employeeProfileError
+      });
+    }
+
     const update = {};
+    const unset = {};
 
     if (typeof name !== 'undefined') update.name = name;
     if (typeof role !== 'undefined') update.role = role;
     if (typeof department !== 'undefined') update.department = department;
+    if (typeof designation !== 'undefined') update.designation = designation;
+    if (typeof cabinNumber !== 'undefined') update.cabinNumber = cabinNumber;
+    if (typeof officeLocation !== 'undefined') update.officeLocation = officeLocation;
     if (typeof phone !== 'undefined') update.phone = phone;
     if (typeof active !== 'undefined') update.active = active;
 
     if (typeof email !== 'undefined') {
       const normalizedEmail = email.toLowerCase().trim();
-      const existingUser = await User.findOne({ email: normalizedEmail, _id: { $ne: id } });
+      const existingEmailUser = await User.findOne({ email: normalizedEmail, _id: { $ne: id } });
 
-      if (existingUser) {
+      if (existingEmailUser) {
         return res.status(409).json({
           success: false,
           message: 'Email is already registered'
@@ -129,14 +198,30 @@ export const updateUser = async (req, res, next) => {
       update.email = normalizedEmail;
     }
 
-    const user = await User.findByIdAndUpdate(id, update, { new: true, runValidators: true }).select(userFields);
+    if (typeof employeeCode !== 'undefined') {
+      const normalizedEmployeeCode = employeeCode == null ? '' : String(employeeCode).trim().toUpperCase();
 
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
-      });
+      if (normalizedEmployeeCode) {
+        const existingEmployeeCode = await User.findOne({
+          employeeCode: normalizedEmployeeCode,
+          _id: { $ne: id }
+        });
+
+        if (existingEmployeeCode) {
+          return res.status(409).json({
+            success: false,
+            message: 'Employee code is already assigned'
+          });
+        }
+
+        update.employeeCode = normalizedEmployeeCode;
+      } else {
+        unset.employeeCode = '';
+      }
     }
+
+    const updateOperation = Object.keys(unset).length > 0 ? { $set: update, $unset: unset } : update;
+    const user = await User.findByIdAndUpdate(id, updateOperation, { new: true, runValidators: true }).select(userFields);
 
     return res.status(200).json({
       success: true,

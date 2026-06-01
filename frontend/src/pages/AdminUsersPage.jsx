@@ -80,6 +80,10 @@ const initialForm = {
   password: '',
   role: 'employee',
   department: '',
+  designation: '',
+  cabinNumber: '',
+  employeeCode: '',
+  officeLocation: '',
   phone: ''
 };
 
@@ -89,6 +93,10 @@ const emptyEditForm = {
   email: '',
   role: 'employee',
   department: '',
+  designation: '',
+  cabinNumber: '',
+  employeeCode: '',
+  officeLocation: '',
   phone: '',
   active: true
 };
@@ -99,6 +107,10 @@ const toEditForm = (user) => ({
   email: user?.email || '',
   role: user?.role || 'employee',
   department: user?.department || '',
+  designation: user?.designation || '',
+  cabinNumber: user?.cabinNumber || '',
+  employeeCode: user?.employeeCode || '',
+  officeLocation: user?.officeLocation || '',
   phone: user?.phone || '',
   active: Boolean(user?.active)
 });
@@ -117,7 +129,7 @@ const AdminUsersPage = () => {
     success
   } = useAppSelector((state) => state.userManagement);
 
-  const [filters, setFilters] = useState({ search: '', role: '' });
+  const [filters, setFilters] = useState({ search: '', role: '', department: '', designation: '' });
   const [formData, setFormData] = useState(initialForm);
   const [editForm, setEditForm] = useState(emptyEditForm);
   const [resetPassword, setResetPassword] = useState('');
@@ -215,6 +227,10 @@ const AdminUsersPage = () => {
       email: editForm.email,
       role: editForm.role,
       department: editForm.department,
+      designation: editForm.designation,
+      cabinNumber: editForm.cabinNumber,
+      employeeCode: editForm.employeeCode,
+      officeLocation: editForm.officeLocation,
       phone: editForm.phone,
       active: editForm.active
     };
@@ -347,6 +363,44 @@ const AdminUsersPage = () => {
             <Grid size={{ xs: 12, md: 6 }}>
               <TextField label="Phone" name="phone" value={formData.phone} onChange={handleFormChange} fullWidth />
             </Grid>
+            <Grid size={{ xs: 12, md: 6 }}>
+              <TextField
+                label="Designation"
+                name="designation"
+                value={formData.designation}
+                onChange={handleFormChange}
+                required={formData.role === 'employee'}
+                fullWidth
+              />
+            </Grid>
+            <Grid size={{ xs: 12, md: 6 }}>
+              <TextField
+                label="Cabin Number"
+                name="cabinNumber"
+                value={formData.cabinNumber}
+                onChange={handleFormChange}
+                required={formData.role === 'employee'}
+                fullWidth
+              />
+            </Grid>
+            <Grid size={{ xs: 12, md: 6 }}>
+              <TextField
+                label="Employee Code"
+                name="employeeCode"
+                value={formData.employeeCode}
+                onChange={handleFormChange}
+                fullWidth
+              />
+            </Grid>
+            <Grid size={{ xs: 12, md: 6 }}>
+              <TextField
+                label="Office Location"
+                name="officeLocation"
+                value={formData.officeLocation}
+                onChange={handleFormChange}
+                fullWidth
+              />
+            </Grid>
           </Grid>
 
           <Button
@@ -389,6 +443,22 @@ const AdminUsersPage = () => {
                 </MenuItem>
               ))}
             </TextField>
+            <TextField
+              label="Department"
+              name="department"
+              value={filters.department}
+              onChange={handleFilterChange}
+              fullWidth
+              sx={{ maxWidth: { md: 220 } }}
+            />
+            <TextField
+              label="Designation"
+              name="designation"
+              value={filters.designation}
+              onChange={handleFilterChange}
+              fullWidth
+              sx={{ maxWidth: { md: 220 } }}
+            />
             <Button
               variant="outlined"
               startIcon={isLoading ? <CircularProgress size={16} /> : <RefreshIcon />}
@@ -405,21 +475,23 @@ const AdminUsersPage = () => {
           </Typography>
 
           <TableContainer>
-            <Table sx={{ minWidth: 980 }}>
+            <Table sx={{ minWidth: 1180 }}>
               <TableHead>
                 <TableRow>
                   <TableCell>Name</TableCell>
                   <TableCell>Email</TableCell>
                   <TableCell>Role</TableCell>
+                  <TableCell>Designation</TableCell>
                   <TableCell>Department</TableCell>
-                  <TableCell>Active</TableCell>
+                  <TableCell>Cabin Number</TableCell>
+                  <TableCell>Status</TableCell>
                   <TableCell align="right">Actions</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {isLoading && (
                   <TableRow>
-                    <TableCell colSpan={6} align="center" sx={{ py: 5 }}>
+                    <TableCell colSpan={8} align="center" sx={{ py: 5 }}>
                       <CircularProgress />
                     </TableCell>
                   </TableRow>
@@ -427,7 +499,7 @@ const AdminUsersPage = () => {
 
                 {!isLoading && !hasUsers && (
                   <TableRow>
-                    <TableCell colSpan={6} align="center" sx={{ py: 5 }}>
+                    <TableCell colSpan={8} align="center" sx={{ py: 5 }}>
                       No users found
                     </TableCell>
                   </TableRow>
@@ -450,7 +522,9 @@ const AdminUsersPage = () => {
                           variant="outlined"
                         />
                       </TableCell>
+                      <TableCell>{user.designation || '-'}</TableCell>
                       <TableCell>{user.department || '-'}</TableCell>
+                      <TableCell>{user.cabinNumber || '-'}</TableCell>
                       <TableCell>
                         <Chip
                           label={user.active ? 'Active' : 'Inactive'}
@@ -522,7 +596,11 @@ const AdminUsersPage = () => {
               <Typography><strong>Name:</strong> {selectedUser?.name || '-'}</Typography>
               <Typography><strong>Email:</strong> {selectedUser?.email || '-'}</Typography>
               <Typography><strong>Role:</strong> {roleLabels[selectedUser?.role] || '-'}</Typography>
+              <Typography><strong>Designation:</strong> {selectedUser?.designation || '-'}</Typography>
               <Typography><strong>Department:</strong> {selectedUser?.department || '-'}</Typography>
+              <Typography><strong>Cabin Number:</strong> {selectedUser?.cabinNumber || '-'}</Typography>
+              <Typography><strong>Employee Code:</strong> {selectedUser?.employeeCode || '-'}</Typography>
+              <Typography><strong>Office Location:</strong> {selectedUser?.officeLocation || '-'}</Typography>
               <Typography><strong>Phone:</strong> {selectedUser?.phone || '-'}</Typography>
               <Typography><strong>Status:</strong> {selectedUser?.active ? 'Active' : 'Inactive'}</Typography>
             </Stack>
@@ -564,6 +642,36 @@ const AdminUsersPage = () => {
                   label="Department"
                   name="department"
                   value={editForm.department}
+                  onChange={handleEditChange}
+                  fullWidth
+                />
+                <TextField
+                  label="Designation"
+                  name="designation"
+                  value={editForm.designation}
+                  onChange={handleEditChange}
+                  required={editForm.role === 'employee'}
+                  fullWidth
+                />
+                <TextField
+                  label="Cabin Number"
+                  name="cabinNumber"
+                  value={editForm.cabinNumber}
+                  onChange={handleEditChange}
+                  required={editForm.role === 'employee'}
+                  fullWidth
+                />
+                <TextField
+                  label="Employee Code"
+                  name="employeeCode"
+                  value={editForm.employeeCode}
+                  onChange={handleEditChange}
+                  fullWidth
+                />
+                <TextField
+                  label="Office Location"
+                  name="officeLocation"
+                  value={editForm.officeLocation}
                   onChange={handleEditChange}
                   fullWidth
                 />

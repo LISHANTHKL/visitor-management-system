@@ -34,6 +34,34 @@ const userSchema = new mongoose.Schema(
       trim: true,
       default: ''
     },
+    designation: {
+      type: String,
+      trim: true,
+      default: ''
+    },
+    cabinNumber: {
+      type: String,
+      trim: true,
+      default: ''
+    },
+    employeeCode: {
+      type: String,
+      trim: true,
+      uppercase: true,
+      set: (value) => {
+        if (typeof value !== 'string') {
+          return value;
+        }
+
+        const trimmedValue = value.trim();
+        return trimmedValue ? trimmedValue : undefined;
+      }
+    },
+    officeLocation: {
+      type: String,
+      trim: true,
+      default: ''
+    },
     phone: {
       type: String,
       trim: true,
@@ -46,6 +74,16 @@ const userSchema = new mongoose.Schema(
   },
   {
     timestamps: true
+  }
+);
+
+userSchema.index(
+  { employeeCode: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      employeeCode: { $exists: true, $type: 'string' }
+    }
   }
 );
 
@@ -69,4 +107,3 @@ userSchema.methods.toJSON = function toJSON() {
 };
 
 export const User = mongoose.model('User', userSchema);
-
