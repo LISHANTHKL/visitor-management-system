@@ -1,8 +1,10 @@
 import mongoose from 'mongoose';
 import { VisitorRequest, VISITOR_REQUEST_STATUS } from '../models/visitorRequest.model.js';
+import { createAuditLog } from '../utils/auditLogger.js';
 import { getVisitDateRange } from '../utils/visitSlots.js';
 import { queueVisitorRequestEmail } from '../utils/emailQueue.js';
 import { generateVisitorPassQr } from '../services/qr.service.js';
+import { emitDashboardUpdate } from '../services/socket.service.js';
 
 const requestFields =
   'visitorName visitorEmail visitorPhone employeeId employeeName designation department cabinNumber purpose visitDate visitTime status rejectionReason reviewedBy reviewedAt qrCodeImage qrToken qrGeneratedAt emailLogs createdAt updatedAt';
@@ -128,10 +130,18 @@ export const approveVisitorRequest = async (req, res, next) => {
     await generateVisitorPassQr(request);
     await request.save();
 
+    await createAuditLog({
+      visitorId: request._id,
+      action: 'approved',
+      actor: req.user
+    });
+
     queueVisitorRequestEmail({
       request,
       type: 'requestApproved'
     });
+
+    emitDashboardUpdate({ reason: 'visitor_approved' });
 
     return res.status(200).json({
       success: true,
@@ -172,10 +182,18 @@ export const rejectVisitorRequest = async (req, res, next) => {
     request.reviewedAt = new Date();
     await request.save();
 
+    await createAuditLog({
+      visitorId: request._id,
+      action: 'rejected',
+      actor: req.user
+    });
+
     queueVisitorRequestEmail({
       request,
       type: 'requestRejected'
     });
+
+    emitDashboardUpdate({ reason: 'visitor_rejected' });
 
     return res.status(200).json({
       success: true,

@@ -26,6 +26,7 @@ import {
 } from '@mui/material';
 import EventAvailableIcon from '@mui/icons-material/EventAvailable';
 import HourglassTopIcon from '@mui/icons-material/HourglassTop';
+import MeetingRoomIcon from '@mui/icons-material/MeetingRoom';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import SearchIcon from '@mui/icons-material/Search';
 import UpcomingIcon from '@mui/icons-material/Upcoming';
@@ -42,6 +43,11 @@ import {
   fetchUpcomingEmployeeVisitors,
   selectEmployeeVisitorRequest
 } from '../store/employeeVisitorSlice.js';
+import {
+  applyEmployeeStatusUpdate,
+  fetchMyAvailability
+} from '../store/availabilitySlice.js';
+import { subscribeToEmployeeStatus } from '../services/socketService.js';
 
 const statusOptions = [
   { label: 'All statuses', value: '' },
@@ -104,6 +110,41 @@ const SummaryCard = ({ label, value, icon }) => (
     </Stack>
   </Paper>
 );
+
+const StatusCard = ({ status }) => {
+  const isOccupied = status?.status === 'occupied';
+
+  return (
+    <Paper
+      variant="outlined"
+      sx={{
+        p: 2.5,
+        borderRadius: 2,
+        height: '100%',
+        borderColor: isOccupied ? 'warning.main' : 'success.main',
+        bgcolor: isOccupied ? 'rgba(245, 158, 11, 0.08)' : 'rgba(22, 163, 74, 0.08)'
+      }}
+    >
+      <Stack spacing={1}>
+        <Stack direction="row" justifyContent="space-between" alignItems="center">
+          <Typography variant="body2" color="text.secondary">
+            Current Status
+          </Typography>
+          <MeetingRoomIcon color={isOccupied ? 'warning' : 'success'} />
+        </Stack>
+        <Typography variant="h5" sx={{ fontWeight: 800 }}>
+          {isOccupied ? 'Occupied' : 'Available'}
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          Current Visitor
+        </Typography>
+        <Typography sx={{ fontWeight: 700 }}>
+          {status?.currentVisitor?.visitorName || '-'}
+        </Typography>
+      </Stack>
+    </Paper>
+  );
+};
 
 const VisitorTable = ({ title, requests, isLoading, onView, emptyMessage }) => (
   <Paper variant="outlined" sx={{ p: 3, borderRadius: 2 }}>
@@ -202,6 +243,7 @@ const EmployeeVisitorsPage = () => {
     isLoadingUpcoming,
     error
   } = useAppSelector((state) => state.employeeVisitor);
+  const { myStatus } = useAppSelector((state) => state.availability);
 
   const [filters, setFilters] = useState({
     date: '',
@@ -224,11 +266,26 @@ const EmployeeVisitorsPage = () => {
     dispatch(fetchTodayEmployeeVisitors());
     dispatch(fetchUpcomingEmployeeVisitors());
     dispatch(fetchEmployeeVisitorRequests(filters));
+    dispatch(fetchMyAvailability());
   }, [dispatch, filters]);
 
   useEffect(() => {
     loadDashboard();
   }, [loadDashboard]);
+
+  useEffect(() => {
+    const unsubscribe = subscribeToEmployeeStatus((payload) => {
+      if (String(payload?.employeeId || '') !== String(employee?._id || '')) {
+        return;
+      }
+
+      dispatch(applyEmployeeStatusUpdate(payload));
+      dispatch(fetchMyAvailability());
+      dispatch(fetchTodayEmployeeVisitors());
+    });
+
+    return unsubscribe;
+  }, [dispatch, employee?._id]);
 
   const handleFilterChange = (event) => {
     setFilters((current) => ({
@@ -265,28 +322,31 @@ const EmployeeVisitorsPage = () => {
       )}
 
       <Grid container spacing={2}>
-        <Grid size={{ xs: 12, md: 3 }}>
+        <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+          <StatusCard status={myStatus} />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6, md: 4 }}>
           <SummaryCard
             label="Today's Visitors"
             value={todayVisitors.length}
             icon={<EventAvailableIcon color="primary" />}
           />
         </Grid>
-        <Grid size={{ xs: 12, md: 3 }}>
+        <Grid size={{ xs: 12, sm: 6, md: 4 }}>
           <SummaryCard
             label="Upcoming Visitors"
             value={upcomingVisitors.length}
             icon={<UpcomingIcon color="primary" />}
           />
         </Grid>
-        <Grid size={{ xs: 12, md: 3 }}>
+        <Grid size={{ xs: 12, sm: 6, md: 4 }}>
           <SummaryCard
             label="Pending Requests"
             value={pendingCount}
             icon={<HourglassTopIcon color="warning" />}
           />
         </Grid>
-        <Grid size={{ xs: 12, md: 3 }}>
+        <Grid size={{ xs: 12, sm: 6, md: 4 }}>
           <SummaryCard
             label="Approved Requests"
             value={approvedCount}

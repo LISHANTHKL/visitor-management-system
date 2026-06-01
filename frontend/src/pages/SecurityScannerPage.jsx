@@ -15,10 +15,12 @@ import {
 import CameraAltIcon from '@mui/icons-material/CameraAlt';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
+import LoginIcon from '@mui/icons-material/Login';
+import LogoutIcon from '@mui/icons-material/Logout';
 import QrCodeScannerIcon from '@mui/icons-material/QrCodeScanner';
 import StopCircleIcon from '@mui/icons-material/StopCircle';
 import VerifiedUserIcon from '@mui/icons-material/VerifiedUser';
-import { verifyQrToken } from '../services/securityQrService.js';
+import { checkInByQrToken, checkOutByQrToken, verifyQrToken } from '../services/securityQrService.js';
 
 const formatDate = (value) => {
   if (!value) return '-';
@@ -37,6 +39,41 @@ const formatSlotLabel = (slot) => {
   const suffix = hourValue >= 12 ? 'PM' : 'AM';
   const hour = hourValue % 12 || 12;
   return `${String(hour).padStart(2, '0')}:${String(minuteValue).padStart(2, '0')} ${suffix}`;
+};
+
+const formatDateTime = (value) => {
+  if (!value) return '-';
+
+  return new Intl.DateTimeFormat(undefined, {
+    year: 'numeric',
+    month: 'short',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  }).format(new Date(value));
+};
+
+const formatDuration = (minutes) => {
+  if (minutes === null || minutes === undefined) return '-';
+
+  const numericMinutes = Number(minutes);
+
+  if (!Number.isFinite(numericMinutes)) return '-';
+  if (numericMinutes < 1) return 'Less than 1 min';
+
+  const hours = Math.floor(numericMinutes / 60);
+  const remainingMinutes = numericMinutes % 60;
+  const parts = [];
+
+  if (hours) {
+    parts.push(`${hours} hr`);
+  }
+
+  if (remainingMinutes) {
+    parts.push(`${remainingMinutes} min`);
+  }
+
+  return parts.join(' ');
 };
 
 const extractQrToken = (qrText) => {
@@ -63,7 +100,17 @@ const DetailLine = ({ label, value }) => (
   </Box>
 );
 
-const VerificationResult = ({ result }) => {
+const actionLabels = {
+  check_in: 'CHECK IN',
+  check_out: 'CHECK OUT'
+};
+
+const actionIcons = {
+  check_in: <LoginIcon />,
+  check_out: <LogoutIcon />
+};
+
+const VerificationResult = ({ result, isActionLoading, onVisitAction }) => {
   if (!result) {
     return (
       <Paper variant="outlined" sx={{ p: 3, borderRadius: 2, height: '100%' }}>
@@ -80,6 +127,8 @@ const VerificationResult = ({ result }) => {
 
   const isValid = result.valid;
   const request = result.request;
+  const visitLog = result.visitLog;
+  const actionColor = result.nextAction === 'check_out' ? 'warning' : 'success';
 
   return (
     <Paper
@@ -104,6 +153,23 @@ const VerificationResult = ({ result }) => {
             </Typography>
           </Box>
         </Stack>
+
+        {isValid && result.nextAction && (
+          <Button
+            variant="contained"
+            color={actionColor}
+            size="large"
+            startIcon={actionIcons[result.nextAction]}
+            onClick={() => onVisitAction(result.nextAction)}
+            disabled={isActionLoading}
+          >
+            {isActionLoading ? 'Saving...' : actionLabels[result.nextAction]}
+          </Button>
+        )}
+
+        {isValid && !result.nextAction && result.code === 'CHECKED_OUT' && (
+          <Alert severity="info">This visitor has already checked out.</Alert>
+        )}
 
         {request && (
           <>
@@ -136,6 +202,26 @@ const VerificationResult = ({ result }) => {
             </Grid>
           </>
         )}
+
+        {visitLog && (
+          <>
+            <Divider />
+            <Grid container spacing={2}>
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <DetailLine label="Check-In Time" value={formatDateTime(visitLog.checkInTime)} />
+              </Grid>
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <DetailLine label="Check-Out Time" value={formatDateTime(visitLog.checkOutTime)} />
+              </Grid>
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <DetailLine label="Duration" value={formatDuration(visitLog.duration)} />
+              </Grid>
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <DetailLine label="Security User" value={visitLog.securityUser?.name || '-'} />
+              </Grid>
+            </Grid>
+          </>
+        )}
       </Stack>
     </Paper>
   );
@@ -151,6 +237,7 @@ const SecurityScannerPage = () => {
 
   const [isCameraActive, setIsCameraActive] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
+  const [isActionLoading, setIsActionLoading] = useState(false);
   const [scanError, setScanError] = useState('');
   const [result, setResult] = useState(null);
 
@@ -192,12 +279,42 @@ const SecurityScannerPage = () => {
 
     try {
       const verification = await verifyQrToken(qrToken);
-      setResult(verification);
+      setResult({
+        ...verification,
+        qrToken
+      });
     } catch (requestError) {
       setResult(null);
       setScanError(requestError.response?.data?.message || 'Unable to verify QR code');
     } finally {
       setIsVerifying(false);
+    }
+  };
+
+  const handleVisitAction = async (action) => {
+    const qrToken = result?.qrToken;
+
+    if (!qrToken) {
+      setScanError('Scan a valid QR code before check-in or check-out.');
+      return;
+    }
+
+    setIsActionLoading(true);
+    setScanError('');
+
+    try {
+      const actionResult = action === 'check_out' ? await checkOutByQrToken(qrToken) : await checkInByQrToken(qrToken);
+      setResult({
+        valid: true,
+        code: action === 'check_out' ? 'CHECKED_OUT' : 'CHECKED_IN',
+        reason: action === 'check_out' ? 'Visitor checked out successfully' : 'Visitor checked in successfully',
+        ...actionResult,
+        qrToken
+      });
+    } catch (requestError) {
+      setScanError(requestError.response?.data?.message || 'Unable to update visit log');
+    } finally {
+      setIsActionLoading(false);
     }
   };
 
@@ -437,7 +554,11 @@ const SecurityScannerPage = () => {
         </Grid>
 
         <Grid size={{ xs: 12, md: 6 }}>
-          <VerificationResult result={result} />
+          <VerificationResult
+            result={result}
+            isActionLoading={isActionLoading}
+            onVisitAction={handleVisitAction}
+          />
         </Grid>
       </Grid>
     </Stack>

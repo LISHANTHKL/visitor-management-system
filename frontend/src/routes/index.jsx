@@ -2,6 +2,7 @@ import { createBrowserRouter, Navigate } from 'react-router-dom';
 import ProtectedRoute from '../components/ProtectedRoute.jsx';
 import RoleHomeRoute from '../components/RoleHomeRoute.jsx';
 import RoleProtectedRoute from '../components/RoleProtectedRoute.jsx';
+import AdminLogsPage from '../pages/AdminLogsPage.jsx';
 import AdminUsersPage from '../pages/AdminUsersPage.jsx';
 import AdminVisitorRequestsPage from '../pages/AdminVisitorRequestsPage.jsx';
 import MainLayout from '../layouts/MainLayout.jsx';
@@ -64,8 +65,12 @@ export const router = createBrowserRouter([
                 element: <SecurityScannerPage />
               },
               {
-                path: 'security/visitor-logs',
+                path: 'security/logs',
                 element: <SecurityVisitorLogsPage />
+              },
+              {
+                path: 'security/visitor-logs',
+                element: <Navigate to="/security/logs" replace />
               }
             ]
           },
@@ -88,6 +93,10 @@ export const router = createBrowserRouter([
               {
                 path: 'admin/visitor-requests',
                 element: <AdminVisitorRequestsPage />
+              },
+              {
+                path: 'admin/logs',
+                element: <AdminLogsPage />
               }
             ]
           }

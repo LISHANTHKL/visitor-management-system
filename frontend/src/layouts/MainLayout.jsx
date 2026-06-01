@@ -37,6 +37,12 @@ const navItems = [
     roles: ['admin']
   },
   {
+    label: 'Logs',
+    path: '/admin/logs',
+    icon: <ReceiptLongIcon fontSize="small" />,
+    roles: ['admin']
+  },
+  {
     label: 'My Visitors',
     path: '/employee/visitors',
     icon: <EventAvailableIcon fontSize="small" />,
@@ -50,7 +56,7 @@ const navItems = [
   },
   {
     label: 'Visitor Logs',
-    path: '/security/visitor-logs',
+    path: '/security/logs',
     icon: <ReceiptLongIcon fontSize="small" />,
     roles: ['security']
   }

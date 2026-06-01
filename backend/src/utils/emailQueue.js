@@ -1,6 +1,8 @@
 import { VisitorRequest } from '../models/visitorRequest.model.js';
 import { sendEmail } from '../services/email.service.js';
 import {
+  buildVisitCheckInEmail,
+  buildVisitCheckOutEmail,
   buildRequestApprovedEmail,
   buildRequestRejectedEmail,
   buildRequestSubmittedEmail
@@ -10,6 +12,11 @@ const emailTemplateBuilders = {
   requestSubmitted: buildRequestSubmittedEmail,
   requestApproved: buildRequestApprovedEmail,
   requestRejected: buildRequestRejectedEmail
+};
+
+const visitEmailTemplateBuilders = {
+  visitCheckIn: buildVisitCheckInEmail,
+  visitCheckOut: buildVisitCheckOutEmail
 };
 
 const emailTypeLabels = {
@@ -72,6 +79,30 @@ export const queueVisitorRequestEmail = ({ request, type }) => {
       } catch (logError) {
         console.error(`Email log failed for request ${request._id}:`, logError.message);
       }
+    }
+  });
+};
+
+export const queueVisitLogEmail = ({ visitLog, type }) => {
+  const templateBuilder = visitEmailTemplateBuilders[type];
+
+  if (!templateBuilder || !visitLog?.visitorEmail) {
+    return;
+  }
+
+  setImmediate(async () => {
+    const recipient = visitLog.visitorEmail;
+
+    try {
+      const email = templateBuilder(visitLog);
+      await sendEmail({
+        to: recipient,
+        subject: email.subject,
+        html: email.html,
+        attachments: email.attachments
+      });
+    } catch (error) {
+      console.error(`Visit log email failed for ${visitLog._id}:`, error.message);
     }
   });
 };

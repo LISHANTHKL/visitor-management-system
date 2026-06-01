@@ -94,6 +94,7 @@ const VisitorRequestPage = () => {
         if (isActive) {
           setAvailableSlots(data.availableSlots || []);
           setBookedSlots(data.bookedSlots || []);
+          setSlotError(data.employeeStatus === 'occupied' ? 'Selected employee is currently occupied' : '');
         }
       } catch (requestError) {
         if (isActive) {

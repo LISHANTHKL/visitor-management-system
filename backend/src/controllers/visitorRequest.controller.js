@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import { User } from '../models/user.model.js';
 import { VisitorRequest } from '../models/visitorRequest.model.js';
+import { isEmployeeOccupied } from '../services/employeeStatus.service.js';
 import {
   generateVisitSlots,
   getVisitDateRange,
@@ -78,16 +79,18 @@ export const getAvailableSlots = async (req, res, next) => {
     }
 
     const allSlots = generateVisitSlots();
+    const occupied = await isEmployeeOccupied(employee._id);
     const bookedSlots = await getBookedSlots(employee._id, dateRange);
     const bookedSlotSet = new Set(bookedSlots);
-    const availableSlots = allSlots.filter((slot) => !bookedSlotSet.has(slot));
+    const availableSlots = occupied ? [] : allSlots.filter((slot) => !bookedSlotSet.has(slot));
 
     return res.status(200).json({
       success: true,
       message: 'Available slots loaded successfully',
       data: {
         availableSlots,
-        bookedSlots
+        bookedSlots,
+        employeeStatus: occupied ? 'occupied' : 'available'
       }
     });
   } catch (error) {
@@ -138,6 +141,14 @@ export const createVisitorRequest = async (req, res, next) => {
     }
 
     const dateRange = getVisitDateRange(visitDate);
+
+    if (await isEmployeeOccupied(employee._id)) {
+      return res.status(409).json({
+        success: false,
+        message: 'Selected employee is currently occupied. Please choose another employee or try later.'
+      });
+    }
+
     const bookedSlots = await getBookedSlots(employee._id, dateRange);
 
     if (bookedSlots.includes(visitTime)) {

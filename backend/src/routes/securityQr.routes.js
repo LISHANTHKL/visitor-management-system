@@ -1,5 +1,10 @@
 import { Router } from 'express';
-import { verifySecurityQr } from '../controllers/securityQr.controller.js';
+import {
+  checkInVisitor,
+  checkOutVisitor,
+  getSecurityVisitLogs,
+  verifySecurityQr
+} from '../controllers/securityQr.controller.js';
 import { protect } from '../middleware/auth.middleware.js';
 import { authorizeRoles } from '../middleware/role.middleware.js';
 
@@ -9,5 +14,8 @@ router.use(protect);
 router.use(authorizeRoles('security'));
 
 router.post('/verify-qr', verifySecurityQr);
+router.post('/check-in', checkInVisitor);
+router.post('/check-out', checkOutVisitor);
+router.get('/logs', getSecurityVisitLogs);
 
 export default router;

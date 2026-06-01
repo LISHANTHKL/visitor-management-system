@@ -32,6 +32,41 @@ const detailRow = (label, value) => `
   </tr>
 `;
 
+const formatDateTime = (value) => {
+  if (!value) return '-';
+
+  return new Intl.DateTimeFormat('en-IN', {
+    year: 'numeric',
+    month: 'short',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  }).format(new Date(value));
+};
+
+const formatDuration = (minutes) => {
+  if (minutes === null || minutes === undefined) return '-';
+
+  const numericMinutes = Number(minutes);
+
+  if (!Number.isFinite(numericMinutes)) return '-';
+  if (numericMinutes < 1) return 'Less than 1 minute';
+
+  const hours = Math.floor(numericMinutes / 60);
+  const remainingMinutes = numericMinutes % 60;
+  const parts = [];
+
+  if (hours) {
+    parts.push(`${hours} hour${hours === 1 ? '' : 's'}`);
+  }
+
+  if (remainingMinutes) {
+    parts.push(`${remainingMinutes} minute${remainingMinutes === 1 ? '' : 's'}`);
+  }
+
+  return parts.join(' ');
+};
+
 const qrAttachment = (request) => {
   if (!request.qrCodeImage?.startsWith('data:image/png;base64,')) {
     return null;
@@ -143,6 +178,44 @@ export const buildRequestRejectedEmail = (request) => ({
       detailRow('Employee Name', request.employeeName),
       detailRow('Rejection Reason', request.rejectionReason),
       detailRow('Status', 'Rejected')
+    ]
+  })
+});
+
+export const buildVisitCheckInEmail = (visitLog) => ({
+  subject: 'Visitor Check-In Confirmed',
+  html: renderLayout({
+    title: 'Visitor Check-In Confirmed',
+    intro: 'Your check-in has been recorded successfully.',
+    statusLabel: 'Status: Checked In',
+    statusColor: '#16a34a',
+    rows: [
+      detailRow('Visitor Name', visitLog.visitorName),
+      detailRow('Visitor Email', visitLog.visitorEmail),
+      detailRow('Employee Name', visitLog.employeeName),
+      detailRow('Department', visitLog.department),
+      detailRow('Cabin Number', visitLog.cabinNumber),
+      detailRow('Check-In Time', formatDateTime(visitLog.checkInTime))
+    ]
+  })
+});
+
+export const buildVisitCheckOutEmail = (visitLog) => ({
+  subject: 'Visitor Check-Out Confirmed',
+  html: renderLayout({
+    title: 'Visitor Check-Out Confirmed',
+    intro: 'Your check-out has been recorded successfully.',
+    statusLabel: 'Status: Checked Out',
+    statusColor: '#2563eb',
+    rows: [
+      detailRow('Visitor Name', visitLog.visitorName),
+      detailRow('Visitor Email', visitLog.visitorEmail),
+      detailRow('Employee Name', visitLog.employeeName),
+      detailRow('Department', visitLog.department),
+      detailRow('Cabin Number', visitLog.cabinNumber),
+      detailRow('Check-In Time', formatDateTime(visitLog.checkInTime)),
+      detailRow('Check-Out Time', formatDateTime(visitLog.checkOutTime)),
+      detailRow('Duration', formatDuration(visitLog.duration))
     ]
   })
 });
