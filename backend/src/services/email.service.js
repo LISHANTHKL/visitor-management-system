@@ -27,13 +27,14 @@ const getTransporter = () => {
   return transporter;
 };
 
-export const sendEmail = async ({ to, subject, html }) => {
+export const sendEmail = async ({ to, subject, html, attachments = [] }) => {
   const activeTransporter = getTransporter();
 
   return activeTransporter.sendMail({
     from: env.emailFrom,
     to,
     subject,
-    html
+    html,
+    attachments
   });
 };

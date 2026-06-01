@@ -12,6 +12,7 @@ import NotFoundPage from '../pages/NotFoundPage.jsx';
 import SecurityScannerPage from '../pages/SecurityScannerPage.jsx';
 import SecurityVisitorLogsPage from '../pages/SecurityVisitorLogsPage.jsx';
 import UnauthorizedPage from '../pages/UnauthorizedPage.jsx';
+import VisitorPassPage from '../pages/VisitorPassPage.jsx';
 import VisitorRequestPage from '../pages/VisitorRequestPage.jsx';
 
 export const router = createBrowserRouter([
@@ -26,6 +27,10 @@ export const router = createBrowserRouter([
   {
     path: '/visitor/request',
     element: <VisitorRequestPage />
+  },
+  {
+    path: '/visitor/pass/:id',
+    element: <VisitorPassPage />
   },
   {
     path: '/',

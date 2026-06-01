@@ -28,3 +28,8 @@ export const getVisitorRequestById = async (requestId) => {
   const response = await api.get(`/visitor-requests/${requestId}`);
   return response.data.data;
 };
+
+export const getVisitorPassById = async (requestId) => {
+  const response = await api.get(`/visitor-requests/${requestId}/pass`);
+  return response.data.data;
+};

@@ -32,6 +32,8 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 import SearchIcon from '@mui/icons-material/Search';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import BlockIcon from '@mui/icons-material/Block';
+import DownloadIcon from '@mui/icons-material/Download';
+import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import { useAppDispatch } from '../hooks/useAppDispatch.js';
 import { useAppSelector } from '../hooks/useAppSelector.js';
 import {
@@ -184,7 +186,25 @@ const AdminVisitorRequestsPage = () => {
     }
   };
 
+  const handleViewPass = (requestId) => {
+    window.open(`/visitor/pass/${requestId}`, '_blank', 'noopener,noreferrer');
+  };
+
+  const handleDownloadQr = (request) => {
+    if (!request?.qrCodeImage) {
+      return;
+    }
+
+    const link = document.createElement('a');
+    link.href = request.qrCodeImage;
+    link.download = `visitor-pass-${request._id}.png`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  };
+
   const canActOnRequest = (request) => request.status === 'pending';
+  const canUsePass = (request) => request?.status === 'approved' && Boolean(request.qrCodeImage);
 
   return (
     <Stack spacing={3}>
@@ -477,6 +497,20 @@ const AdminVisitorRequestsPage = () => {
           )}
         </DialogContent>
         <DialogActions>
+          {canUsePass(selectedRequest) && (
+            <>
+              <Button
+                startIcon={<OpenInNewIcon />}
+                variant="outlined"
+                onClick={() => handleViewPass(selectedRequest._id)}
+              >
+                View Pass
+              </Button>
+              <Button startIcon={<DownloadIcon />} variant="outlined" onClick={() => handleDownloadQr(selectedRequest)}>
+                Download QR
+              </Button>
+            </>
+          )}
           {selectedRequest?.status === 'pending' && (
             <>
               <Button

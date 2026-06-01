@@ -32,7 +32,21 @@ const detailRow = (label, value) => `
   </tr>
 `;
 
-const renderLayout = ({ title, intro, statusLabel, statusColor = '#2563eb', rows = [] }) => `
+const qrAttachment = (request) => {
+  if (!request.qrCodeImage?.startsWith('data:image/png;base64,')) {
+    return null;
+  }
+
+  return {
+    filename: `visitor-pass-${request._id}.png`,
+    content: request.qrCodeImage.replace('data:image/png;base64,', ''),
+    encoding: 'base64',
+    contentType: 'image/png',
+    cid: 'visitor-pass-qr'
+  };
+};
+
+const renderLayout = ({ title, intro, statusLabel, statusColor = '#2563eb', rows = [], showQr = false }) => `
 <!doctype html>
 <html>
   <body style="margin:0;padding:0;background:#f8fafc;font-family:Arial,sans-serif;color:#0f172a;">
@@ -58,6 +72,14 @@ const renderLayout = ({ title, intro, statusLabel, statusColor = '#2563eb', rows
                 ${
                   rows.length > 0
                     ? `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border:1px solid #e2e8f0;border-radius:8px;border-collapse:separate;border-spacing:0;overflow:hidden;">${rows.join('')}</table>`
+                    : ''
+                }
+                ${
+                  showQr
+                    ? `<div style="margin-top:24px;text-align:center;">
+                        <div style="color:#0f172a;font-size:15px;font-weight:700;margin-bottom:10px;">Visitor Pass QR Code</div>
+                        <img src="cid:visitor-pass-qr" alt="Visitor Pass QR Code" width="220" height="220" style="display:inline-block;border:1px solid #e2e8f0;border-radius:8px;padding:8px;background:#ffffff;" />
+                      </div>`
                     : ''
                 }
                 <p style="margin:24px 0 0;color:#64748b;font-size:13px;line-height:1.6;">This is an automated notification from the Visitor Management System.</p>
@@ -90,11 +112,13 @@ export const buildRequestApprovedEmail = (request) => ({
   subject: 'Visitor Request Approved',
   html: renderLayout({
     title: 'Visitor Request Approved',
-    intro: 'Your visitor request has been approved. Please find your visit details below.',
+    intro: 'Your visitor request has been approved. Please find your visit details and QR code below.',
     statusLabel: 'Status: Approved',
     statusColor: '#16a34a',
+    showQr: Boolean(request.qrCodeImage),
     rows: [
       detailRow('Visitor Name', request.visitorName),
+      detailRow('Visitor Email', request.visitorEmail),
       detailRow('Employee Name', request.employeeName),
       detailRow('Designation', request.designation),
       detailRow('Department', request.department),
@@ -103,7 +127,8 @@ export const buildRequestApprovedEmail = (request) => ({
       detailRow('Visit Time', formatTime(request.visitTime)),
       detailRow('Status', 'Approved')
     ]
-  })
+  }),
+  attachments: [qrAttachment(request)].filter(Boolean)
 });
 
 export const buildRequestRejectedEmail = (request) => ({

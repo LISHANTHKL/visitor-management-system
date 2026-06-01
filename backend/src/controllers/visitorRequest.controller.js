@@ -14,6 +14,8 @@ const phonePattern = /^[0-9+\-\s()]{7,20}$/;
 
 const requestFields =
   'visitorName visitorEmail visitorPhone employeeId employeeName designation department cabinNumber purpose visitDate visitTime status createdAt updatedAt';
+const passFields =
+  'visitorName employeeName department cabinNumber visitDate visitTime status qrCodeImage qrGeneratedAt';
 
 const getBookedSlots = async (employeeId, dateRange) => {
   const bookedRequests = await VisitorRequest.find({
@@ -201,6 +203,52 @@ export const getVisitorRequestById = async (req, res, next) => {
       message: 'Visitor request loaded successfully',
       data: {
         request
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getVisitorPassById = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid visitor pass id'
+      });
+    }
+
+    const request = await VisitorRequest.findById(id).select(passFields);
+
+    if (!request) {
+      return res.status(404).json({
+        success: false,
+        message: 'Visitor pass not found'
+      });
+    }
+
+    if (request.status !== 'approved') {
+      return res.status(403).json({
+        success: false,
+        message: 'Visitor pass is available only after approval'
+      });
+    }
+
+    if (!request.qrCodeImage) {
+      return res.status(404).json({
+        success: false,
+        message: 'Visitor pass QR code has not been generated'
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Visitor pass loaded successfully',
+      data: {
+        pass: request
       }
     });
   } catch (error) {

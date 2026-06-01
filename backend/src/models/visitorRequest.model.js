@@ -79,6 +79,19 @@ const visitorRequestSchema = new mongoose.Schema(
       type: Date,
       default: null
     },
+    qrCodeImage: {
+      type: String,
+      default: ''
+    },
+    qrToken: {
+      type: String,
+      trim: true,
+      default: ''
+    },
+    qrGeneratedAt: {
+      type: Date,
+      default: null
+    },
     emailLogs: {
       type: [
         {
@@ -117,5 +130,12 @@ const visitorRequestSchema = new mongoose.Schema(
 );
 
 visitorRequestSchema.index({ employeeId: 1, visitDate: 1, visitTime: 1 });
+visitorRequestSchema.index(
+  { qrToken: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { qrToken: { $type: 'string', $gt: '' } }
+  }
+);
 
 export const VisitorRequest = mongoose.model('VisitorRequest', visitorRequestSchema);

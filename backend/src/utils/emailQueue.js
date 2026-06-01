@@ -47,7 +47,8 @@ export const queueVisitorRequestEmail = ({ request, type }) => {
       await sendEmail({
         to: recipient,
         subject: email.subject,
-        html: email.html
+        html: email.html,
+        attachments: email.attachments
       });
 
       await appendEmailLog({

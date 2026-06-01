@@ -2,9 +2,12 @@ import mongoose from 'mongoose';
 import { VisitorRequest, VISITOR_REQUEST_STATUS } from '../models/visitorRequest.model.js';
 import { getVisitDateRange } from '../utils/visitSlots.js';
 import { queueVisitorRequestEmail } from '../utils/emailQueue.js';
+import { generateVisitorPassQr } from '../services/qr.service.js';
 
 const requestFields =
-  'visitorName visitorEmail visitorPhone employeeId employeeName designation department cabinNumber purpose visitDate visitTime status rejectionReason reviewedBy reviewedAt emailLogs createdAt updatedAt';
+  'visitorName visitorEmail visitorPhone employeeId employeeName designation department cabinNumber purpose visitDate visitTime status rejectionReason reviewedBy reviewedAt qrCodeImage qrToken qrGeneratedAt emailLogs createdAt updatedAt';
+const listRequestFields =
+  'visitorName visitorEmail visitorPhone employeeId employeeName designation department cabinNumber purpose visitDate visitTime status rejectionReason reviewedBy reviewedAt qrGeneratedAt createdAt updatedAt';
 
 const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
@@ -77,7 +80,7 @@ export const getAdminVisitorRequests = async (req, res, next) => {
       ];
     }
 
-    const requests = await VisitorRequest.find(query).select(requestFields).sort({ createdAt: -1 });
+    const requests = await VisitorRequest.find(query).select(listRequestFields).sort({ createdAt: -1 });
 
     return res.status(200).json({
       success: true,
@@ -122,6 +125,7 @@ export const approveVisitorRequest = async (req, res, next) => {
     request.rejectionReason = '';
     request.reviewedBy = req.user._id;
     request.reviewedAt = new Date();
+    await generateVisitorPassQr(request);
     await request.save();
 
     queueVisitorRequestEmail({
