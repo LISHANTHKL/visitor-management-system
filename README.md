@@ -565,7 +565,7 @@ Can:
 
 # Author
 
-**Lishanth K L**
+**Amith M Shetty and Lishanth K L**
 
 M.Tech CSE – 2nd Semester
 
