@@ -18,23 +18,42 @@ import {
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import AssignmentTurnedInIcon from '@mui/icons-material/AssignmentTurnedIn';
 import DashboardIcon from '@mui/icons-material/Dashboard';
+import EventAvailableIcon from '@mui/icons-material/EventAvailable';
 import LogoutIcon from '@mui/icons-material/Logout';
-import MonitorHeartIcon from '@mui/icons-material/MonitorHeart';
 import PeopleAltIcon from '@mui/icons-material/PeopleAlt';
+import QrCodeScannerIcon from '@mui/icons-material/QrCodeScanner';
+import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
 import { useAppDispatch } from '../hooks/useAppDispatch.js';
 import { useAppSelector } from '../hooks/useAppSelector.js';
 import { logout } from '../store/authSlice.js';
 
 const navItems = [
-  { label: 'Dashboard', path: '/', icon: <DashboardIcon fontSize="small" /> },
-  { label: 'Health', path: '/health', icon: <MonitorHeartIcon fontSize="small" /> },
+  { label: 'Dashboard', path: '/', icon: <DashboardIcon fontSize="small" />, roles: ['admin'] },
+  { label: 'Users', path: '/admin/users', icon: <PeopleAltIcon fontSize="small" />, roles: ['admin'] },
   {
     label: 'Visitor Requests',
     path: '/admin/visitor-requests',
     icon: <AssignmentTurnedInIcon fontSize="small" />,
     roles: ['admin']
   },
-  { label: 'Users', path: '/admin/users', icon: <PeopleAltIcon fontSize="small" />, roles: ['admin'] }
+  {
+    label: 'My Visitors',
+    path: '/employee/visitors',
+    icon: <EventAvailableIcon fontSize="small" />,
+    roles: ['employee']
+  },
+  {
+    label: 'QR Scanner',
+    path: '/security',
+    icon: <QrCodeScannerIcon fontSize="small" />,
+    roles: ['security']
+  },
+  {
+    label: 'Visitor Logs',
+    path: '/security/visitor-logs',
+    icon: <ReceiptLongIcon fontSize="small" />,
+    roles: ['security']
+  }
 ];
 
 const roleLabels = {

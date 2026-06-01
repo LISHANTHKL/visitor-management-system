@@ -16,6 +16,19 @@ import { useAppDispatch } from '../hooks/useAppDispatch.js';
 import { useAppSelector } from '../hooks/useAppSelector.js';
 import { clearAuthError, login } from '../store/authSlice.js';
 
+const roleHomePaths = {
+  employee: '/employee/visitors',
+  security: '/security'
+};
+
+const getLoginRedirectPath = (user, fallbackPath = '/') => {
+  if (roleHomePaths[user?.role]) {
+    return roleHomePaths[user.role];
+  }
+
+  return fallbackPath;
+};
+
 const LoginPage = () => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
@@ -41,7 +54,7 @@ const LoginPage = () => {
   }
 
   if (isAuthenticated && !isLoading) {
-    return <Navigate to={from} replace />;
+    return <Navigate to={getLoginRedirectPath(null, from)} replace />;
   }
 
   const handleChange = (event) => {
@@ -56,7 +69,7 @@ const LoginPage = () => {
     const result = await dispatch(login(formData));
 
     if (login.fulfilled.match(result)) {
-      navigate(from, { replace: true });
+      navigate(getLoginRedirectPath(result.payload.user, from), { replace: true });
     }
   };
 

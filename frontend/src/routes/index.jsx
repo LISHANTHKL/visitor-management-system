@@ -1,13 +1,16 @@
 import { createBrowserRouter } from 'react-router-dom';
 import ProtectedRoute from '../components/ProtectedRoute.jsx';
+import RoleHomeRoute from '../components/RoleHomeRoute.jsx';
 import RoleProtectedRoute from '../components/RoleProtectedRoute.jsx';
 import AdminUsersPage from '../pages/AdminUsersPage.jsx';
 import AdminVisitorRequestsPage from '../pages/AdminVisitorRequestsPage.jsx';
 import MainLayout from '../layouts/MainLayout.jsx';
-import DashboardPage from '../pages/DashboardPage.jsx';
+import EmployeeVisitorsPage from '../pages/EmployeeVisitorsPage.jsx';
 import HealthPage from '../pages/HealthPage.jsx';
 import LoginPage from '../pages/LoginPage.jsx';
 import NotFoundPage from '../pages/NotFoundPage.jsx';
+import SecurityScannerPage from '../pages/SecurityScannerPage.jsx';
+import SecurityVisitorLogsPage from '../pages/SecurityVisitorLogsPage.jsx';
 import UnauthorizedPage from '../pages/UnauthorizedPage.jsx';
 import VisitorRequestPage from '../pages/VisitorRequestPage.jsx';
 
@@ -33,7 +36,7 @@ export const router = createBrowserRouter([
         children: [
           {
             index: true,
-            element: <DashboardPage />
+            element: <RoleHomeRoute />
           },
           {
             element: <RoleProtectedRoute allowedRoles={['admin', 'security']} />,
@@ -41,6 +44,28 @@ export const router = createBrowserRouter([
               {
                 path: 'health',
                 element: <HealthPage />
+              }
+            ]
+          },
+          {
+            element: <RoleProtectedRoute allowedRoles={['security']} />,
+            children: [
+              {
+                path: 'security',
+                element: <SecurityScannerPage />
+              },
+              {
+                path: 'security/visitor-logs',
+                element: <SecurityVisitorLogsPage />
+              }
+            ]
+          },
+          {
+            element: <RoleProtectedRoute allowedRoles={['employee']} />,
+            children: [
+              {
+                path: 'employee/visitors',
+                element: <EmployeeVisitorsPage />
               }
             ]
           },
