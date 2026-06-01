@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 
-export const VISITOR_REQUEST_STATUS = ['pending', 'approved'];
+export const VISITOR_REQUEST_STATUS = ['pending', 'approved', 'rejected'];
 
 const visitorRequestSchema = new mongoose.Schema(
   {
@@ -64,6 +64,20 @@ const visitorRequestSchema = new mongoose.Schema(
       type: String,
       enum: VISITOR_REQUEST_STATUS,
       default: 'pending'
+    },
+    rejectionReason: {
+      type: String,
+      trim: true,
+      default: ''
+    },
+    reviewedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null
+    },
+    reviewedAt: {
+      type: Date,
+      default: null
     }
   },
   {

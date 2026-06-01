@@ -16,6 +16,7 @@ import {
   Typography
 } from '@mui/material';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
+import AssignmentTurnedInIcon from '@mui/icons-material/AssignmentTurnedIn';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import LogoutIcon from '@mui/icons-material/Logout';
 import MonitorHeartIcon from '@mui/icons-material/MonitorHeart';
@@ -27,6 +28,12 @@ import { logout } from '../store/authSlice.js';
 const navItems = [
   { label: 'Dashboard', path: '/', icon: <DashboardIcon fontSize="small" /> },
   { label: 'Health', path: '/health', icon: <MonitorHeartIcon fontSize="small" /> },
+  {
+    label: 'Visitor Requests',
+    path: '/admin/visitor-requests',
+    icon: <AssignmentTurnedInIcon fontSize="small" />,
+    roles: ['admin']
+  },
   { label: 'Users', path: '/admin/users', icon: <PeopleAltIcon fontSize="small" />, roles: ['admin'] }
 ];
 

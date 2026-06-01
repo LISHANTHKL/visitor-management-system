@@ -2,6 +2,7 @@ import { createBrowserRouter } from 'react-router-dom';
 import ProtectedRoute from '../components/ProtectedRoute.jsx';
 import RoleProtectedRoute from '../components/RoleProtectedRoute.jsx';
 import AdminUsersPage from '../pages/AdminUsersPage.jsx';
+import AdminVisitorRequestsPage from '../pages/AdminVisitorRequestsPage.jsx';
 import MainLayout from '../layouts/MainLayout.jsx';
 import DashboardPage from '../pages/DashboardPage.jsx';
 import HealthPage from '../pages/HealthPage.jsx';
@@ -49,6 +50,10 @@ export const router = createBrowserRouter([
               {
                 path: 'admin/users',
                 element: <AdminUsersPage />
+              },
+              {
+                path: 'admin/visitor-requests',
+                element: <AdminVisitorRequestsPage />
               }
             ]
           }
