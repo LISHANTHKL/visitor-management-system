@@ -8,6 +8,7 @@ import HealthPage from '../pages/HealthPage.jsx';
 import LoginPage from '../pages/LoginPage.jsx';
 import NotFoundPage from '../pages/NotFoundPage.jsx';
 import UnauthorizedPage from '../pages/UnauthorizedPage.jsx';
+import VisitorRequestPage from '../pages/VisitorRequestPage.jsx';
 
 export const router = createBrowserRouter([
   {
@@ -17,6 +18,10 @@ export const router = createBrowserRouter([
   {
     path: '/unauthorized',
     element: <UnauthorizedPage />
+  },
+  {
+    path: '/visitor/request',
+    element: <VisitorRequestPage />
   },
   {
     path: '/',

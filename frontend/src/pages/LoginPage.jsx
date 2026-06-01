@@ -70,7 +70,7 @@ const LoginPage = () => {
                 Sign in
               </Typography>
               <Typography color="text.secondary" sx={{ mt: 0.5 }}>
-                Visitor Management System
+                Employee / Admin / Security Login
               </Typography>
             </Box>
 
@@ -102,9 +102,23 @@ const LoginPage = () => {
               {isLoading ? 'Signing in...' : 'Sign in'}
             </Button>
 
-            <Button component={RouterLink} to="/unauthorized" color="inherit">
-              View unauthorized page
-            </Button>
+            <Stack spacing={1.5} sx={{ pt: 1 }}>
+              <Box>
+                <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                  Are you a visitor?
+                </Typography>
+                <Typography color="text.secondary">
+                  Request a visit with an employee.
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.75 }}>
+                  Visitors do not need an account. Use the Request a Visit button.
+                </Typography>
+              </Box>
+
+              <Button component={RouterLink} to="/visitor/request" variant="outlined" color="primary">
+                Request a Visit
+              </Button>
+            </Stack>
           </Stack>
         </Paper>
       </Container>
