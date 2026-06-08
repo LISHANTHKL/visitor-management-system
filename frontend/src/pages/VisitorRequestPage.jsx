@@ -6,16 +6,17 @@ import {
   CircularProgress,
   Container,
   Grid,
-  List,
-  ListItem,
-  ListItemText,
   MenuItem,
   Paper,
   Stack,
   TextField,
   Typography
 } from '@mui/material';
+import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import SendIcon from '@mui/icons-material/Send';
+import ShieldOutlinedIcon from '@mui/icons-material/ShieldOutlined';
 import EmployeeSearch from '../components/EmployeeSearch.jsx';
 import { createVisitorRequest, getAvailableSlots } from '../services/visitorRequestService.js';
 
@@ -29,22 +30,21 @@ const initialForm = {
 };
 
 const guidelines = [
-  'Office Timings: 9:00 AM to 6:00 PM',
-  'Visit Duration: 15 Minutes',
-  'Employee cannot attend multiple visitors at same time.',
-  'Security verification required.',
-  'QR code mandatory during entry.',
-  'Visitor may need to wait if employee is in another meeting.'
+  { icon: <AccessTimeIcon fontSize="small" />, text: 'Office Timings: 9:00 AM to 6:00 PM' },
+  { icon: <CheckCircleOutlineIcon fontSize="small" />, text: 'Visit Duration: 15 Minutes per slot' },
+  { icon: <InfoOutlinedIcon fontSize="small" />, text: 'Employee cannot attend multiple visitors simultaneously' },
+  { icon: <ShieldOutlinedIcon fontSize="small" />, text: 'Security verification required at entry' },
+  { icon: <CheckCircleOutlineIcon fontSize="small" />, text: 'QR code must be presented during entry' },
+  { icon: <InfoOutlinedIcon fontSize="small" />, text: 'Visitor may need to wait if employee is in another meeting' }
 ];
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const phonePattern = /^[0-9+\-\s()]{7,20}$/;
 
 const formatSlotLabel = (slot) => {
-  const [hourValue, minuteValue] = slot.split(':').map(Number);
-  const suffix = hourValue >= 12 ? 'PM' : 'AM';
-  const hour = hourValue % 12 || 12;
-  return `${String(hour).padStart(2, '0')}:${String(minuteValue).padStart(2, '0')} ${suffix}`;
+  const [h, m] = slot.split(':').map(Number);
+  const suffix = h >= 12 ? 'PM' : 'AM';
+  return `${String(h % 12 || 12).padStart(2, '0')}:${String(m).padStart(2, '0')} ${suffix}`;
 };
 
 const VisitorRequestPage = () => {
@@ -60,17 +60,10 @@ const VisitorRequestPage = () => {
 
   const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
   const bookedSlotSet = useMemo(() => new Set(bookedSlots), [bookedSlots]);
-  const slotOptions = useMemo(
-    () => [...new Set([...availableSlots, ...bookedSlots])].sort(),
-    [availableSlots, bookedSlots]
-  );
+  const slotOptions = useMemo(() => [...new Set([...availableSlots, ...bookedSlots])].sort(), [availableSlots, bookedSlots]);
 
   useEffect(() => {
-    setFormData((current) => ({
-      ...current,
-      visitTime: ''
-    }));
-
+    setFormData((prev) => ({ ...prev, visitTime: '' }));
     if (!selectedEmployee || !formData.visitDate) {
       setAvailableSlots([]);
       setBookedSlots([]);
@@ -78,50 +71,32 @@ const VisitorRequestPage = () => {
       setSlotError('');
       return undefined;
     }
-
-    let isActive = true;
-
-    const loadSlots = async () => {
+    let active = true;
+    const load = async () => {
       setIsLoadingSlots(true);
       setSlotError('');
-
       try {
-        const data = await getAvailableSlots({
-          employeeId: selectedEmployee._id,
-          date: formData.visitDate
-        });
-
-        if (isActive) {
+        const data = await getAvailableSlots({ employeeId: selectedEmployee._id, date: formData.visitDate });
+        if (active) {
           setAvailableSlots(data.availableSlots || []);
           setBookedSlots(data.bookedSlots || []);
-          setSlotError(data.employeeStatus === 'occupied' ? 'Selected employee is currently occupied' : '');
+          setSlotError(data.employeeStatus === 'occupied' ? 'Employee is currently occupied' : '');
         }
-      } catch (requestError) {
-        if (isActive) {
+      } catch (err) {
+        if (active) {
           setAvailableSlots([]);
           setBookedSlots([]);
-          setSlotError(requestError.response?.data?.message || 'Unable to load available slots');
+          setSlotError(err.response?.data?.message || 'Unable to load slots');
         }
       } finally {
-        if (isActive) {
-          setIsLoadingSlots(false);
-        }
+        if (active) setIsLoadingSlots(false);
       }
     };
-
-    loadSlots();
-
-    return () => {
-      isActive = false;
-    };
+    load();
+    return () => { active = false; };
   }, [selectedEmployee, formData.visitDate]);
 
-  const handleChange = (event) => {
-    setFormData((current) => ({
-      ...current,
-      [event.target.name]: event.target.value
-    }));
-  };
+  const handleChange = (e) => setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
 
   const validateForm = () => {
     if (!selectedEmployee) return 'Please select an employee';
@@ -131,174 +106,205 @@ const VisitorRequestPage = () => {
     if (!formData.purpose.trim()) return 'Purpose is required';
     if (!formData.visitDate) return 'Visit date is required';
     if (!formData.visitTime) return 'Visit time is required';
-    if (bookedSlotSet.has(formData.visitTime)) {
-      return 'Selected slot is no longer available. Please choose another slot.';
-    }
-
+    if (bookedSlotSet.has(formData.visitTime)) return 'Selected slot is no longer available';
     return '';
   };
 
-  const handleSubmit = async (event) => {
-    event.preventDefault();
+  const handleSubmit = async (e) => {
+    e.preventDefault();
     const validationError = validateForm();
-
-    if (validationError) {
-      setError(validationError);
-      setSuccess('');
-      return;
-    }
-
+    if (validationError) { setError(validationError); setSuccess(''); return; }
     setIsSubmitting(true);
     setError('');
     setSuccess('');
-
     try {
-      await createVisitorRequest({
-        ...formData,
-        employeeId: selectedEmployee._id
-      });
-      setSuccess(
-        'Your request has been submitted successfully. You will be notified once the administrator reviews your request.'
-      );
+      await createVisitorRequest({ ...formData, employeeId: selectedEmployee._id });
+      setSuccess('Request submitted successfully. You will be notified once the administrator reviews it.');
       setSelectedEmployee(null);
       setFormData(initialForm);
-    } catch (requestError) {
-      setError(requestError.response?.data?.message || 'Unable to submit visitor request');
+    } catch (err) {
+      setError(err.response?.data?.message || 'Unable to submit request');
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', py: { xs: 3, md: 5 } }}>
+    <Box
+      sx={{
+        minHeight: '100vh',
+        background: 'linear-gradient(135deg, #0d1117 0%, #0f172a 50%, #1a237e 100%)',
+        py: { xs: 4, md: 6 }
+      }}
+    >
       <Container maxWidth="lg">
-        <Stack spacing={3}>
-          <Box>
-            <Typography variant="h4" component="h1" gutterBottom>
-              Visitor Request
+        <Stack spacing={3.5}>
+          <Box sx={{ textAlign: 'center' }}>
+            <Box
+              sx={{
+                width: 52,
+                height: 52,
+                borderRadius: 3,
+                background: 'linear-gradient(135deg, #1e3a8a, #3b82f6)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                mx: 'auto',
+                mb: 2,
+                boxShadow: '0 8px 20px rgba(37,99,235,0.4)'
+              }}
+            >
+              <ShieldOutlinedIcon sx={{ color: '#fff', fontSize: 26 }} />
+            </Box>
+            <Typography
+              variant="h4"
+              sx={{ fontWeight: 800, color: '#f1f5f9', mb: 0.75, letterSpacing: '-0.02em' }}
+            >
+              Request a Visit
             </Typography>
-            <Typography color="text.secondary">
-              Submit your visit request by selecting the employee you want to meet.
+            <Typography sx={{ color: '#64748b', fontSize: '0.9375rem' }}>
+              Select an employee and submit your visit request
             </Typography>
           </Box>
 
-          {error && <Alert severity="error" onClose={() => setError('')}>{error}</Alert>}
-          {success && <Alert severity="success" onClose={() => setSuccess('')}>{success}</Alert>}
+          {error && <Alert severity="error" onClose={() => setError('')} sx={{ borderRadius: 2 }}>{error}</Alert>}
+          {success && <Alert severity="success" onClose={() => setSuccess('')} sx={{ borderRadius: 2 }}>{success}</Alert>}
 
           <Grid container spacing={3}>
             <Grid size={{ xs: 12, md: 4 }}>
-              <Paper variant="outlined" sx={{ p: 3, borderRadius: 2, height: '100%' }}>
-                <Stack spacing={2}>
-                  <Typography variant="h6" component="h2">
+              <Paper
+                sx={{
+                  borderRadius: 3,
+                  overflow: 'hidden',
+                  boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+                  border: '1px solid rgba(255,255,255,0.08)'
+                }}
+              >
+                <Box
+                  sx={{
+                    p: 2.25,
+                    background: 'linear-gradient(135deg, #1e3a8a, #2563eb)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1.25
+                  }}
+                >
+                  <InfoOutlinedIcon sx={{ color: 'rgba(255,255,255,0.8)', fontSize: 18 }} />
+                  <Typography sx={{ color: '#fff', fontWeight: 700, fontSize: '0.875rem' }}>
                     Visitor Guidelines
                   </Typography>
-                  <List dense disablePadding>
-                    {guidelines.map((guideline) => (
-                      <ListItem key={guideline} disablePadding sx={{ py: 0.5 }}>
-                        <ListItemText primary={guideline} />
-                      </ListItem>
-                    ))}
-                  </List>
-                </Stack>
+                </Box>
+                <Box sx={{ bgcolor: '#0d1117' }}>
+                  {guidelines.map((g, idx) => (
+                    <Stack
+                      key={idx}
+                      direction="row"
+                      spacing={1.5}
+                      alignItems="flex-start"
+                      sx={{
+                        px: 2.5,
+                        py: 1.75,
+                        borderBottom: idx < guidelines.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none',
+                        '&:hover': { bgcolor: 'rgba(255,255,255,0.03)' }
+                      }}
+                    >
+                      <Box sx={{ color: '#3b82f6', mt: 0.1, flexShrink: 0 }}>{g.icon}</Box>
+                      <Typography sx={{ color: '#64748b', fontSize: '0.8125rem', lineHeight: 1.6 }}>
+                        {g.text}
+                      </Typography>
+                    </Stack>
+                  ))}
+                </Box>
               </Paper>
             </Grid>
 
             <Grid size={{ xs: 12, md: 8 }}>
-              <Paper component="form" variant="outlined" sx={{ p: 3, borderRadius: 2 }} onSubmit={handleSubmit}>
+              <Paper
+                component="form"
+                onSubmit={handleSubmit}
+                sx={{
+                  p: 3.5,
+                  borderRadius: 3,
+                  boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  bgcolor: 'rgba(255,255,255,0.97)'
+                }}
+              >
                 <Stack spacing={3}>
-                  <EmployeeSearch value={selectedEmployee} onChange={setSelectedEmployee} />
+                  <Box>
+                    <Typography sx={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#94a3b8', mb: 1.5 }}>
+                      Select Employee
+                    </Typography>
+                    <EmployeeSearch value={selectedEmployee} onChange={setSelectedEmployee} />
+                  </Box>
 
-                  <Grid container spacing={2}>
-                    <Grid size={{ xs: 12, md: 6 }}>
-                      <TextField
-                        label="Visitor Name"
-                        name="visitorName"
-                        value={formData.visitorName}
-                        onChange={handleChange}
-                        required
-                        fullWidth
-                      />
+                  <Box>
+                    <Typography sx={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#94a3b8', mb: 1.5 }}>
+                      Your Details
+                    </Typography>
+                    <Grid container spacing={2}>
+                      <Grid size={{ xs: 12, md: 6 }}>
+                        <TextField label="Your Full Name" name="visitorName" value={formData.visitorName} onChange={handleChange} required fullWidth />
+                      </Grid>
+                      <Grid size={{ xs: 12, md: 6 }}>
+                        <TextField label="Email Address" name="visitorEmail" type="email" value={formData.visitorEmail} onChange={handleChange} required fullWidth />
+                      </Grid>
+                      <Grid size={{ xs: 12, md: 6 }}>
+                        <TextField label="Phone Number" name="visitorPhone" value={formData.visitorPhone} onChange={handleChange} required fullWidth />
+                      </Grid>
                     </Grid>
-                    <Grid size={{ xs: 12, md: 6 }}>
-                      <TextField
-                        label="Email"
-                        name="visitorEmail"
-                        type="email"
-                        value={formData.visitorEmail}
-                        onChange={handleChange}
-                        required
-                        fullWidth
-                      />
+                  </Box>
+
+                  <Box>
+                    <Typography sx={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#94a3b8', mb: 1.5 }}>
+                      Visit Details
+                    </Typography>
+                    <Grid container spacing={2}>
+                      <Grid size={{ xs: 12, md: 4 }}>
+                        <TextField label="Visit Date" name="visitDate" type="date" value={formData.visitDate} onChange={handleChange} required fullWidth InputLabelProps={{ shrink: true }} inputProps={{ min: today }} />
+                      </Grid>
+                      <Grid size={{ xs: 12, md: 4 }}>
+                        <TextField
+                          label="Time Slot"
+                          name="visitTime"
+                          value={formData.visitTime}
+                          onChange={handleChange}
+                          required
+                          fullWidth
+                          select
+                          error={Boolean(slotError)}
+                          disabled={!selectedEmployee || !formData.visitDate || isLoadingSlots || slotOptions.length === 0}
+                          helperText={
+                            slotError ||
+                            (!selectedEmployee || !formData.visitDate ? 'Select employee and date first' :
+                              isLoadingSlots ? 'Loading slots...' :
+                                availableSlots.length === 0 ? 'No slots available' : '')
+                          }
+                        >
+                          <MenuItem value="" disabled>Select a slot</MenuItem>
+                          {slotOptions.map((slot) => (
+                            <MenuItem key={slot} value={slot} disabled={bookedSlotSet.has(slot)}>
+                              {formatSlotLabel(slot)}{bookedSlotSet.has(slot) && ' (Booked)'}
+                            </MenuItem>
+                          ))}
+                        </TextField>
+                      </Grid>
+                      <Grid size={{ xs: 12 }}>
+                        <TextField
+                          label="Purpose of Visit"
+                          name="purpose"
+                          value={formData.purpose}
+                          onChange={handleChange}
+                          required
+                          fullWidth
+                          multiline
+                          minRows={3}
+                          inputProps={{ maxLength: 500 }}
+                          helperText={`${formData.purpose.length}/500 characters`}
+                        />
+                      </Grid>
                     </Grid>
-                    <Grid size={{ xs: 12, md: 6 }}>
-                      <TextField
-                        label="Phone"
-                        name="visitorPhone"
-                        value={formData.visitorPhone}
-                        onChange={handleChange}
-                        required
-                        fullWidth
-                      />
-                    </Grid>
-                    <Grid size={{ xs: 12, md: 3 }}>
-                      <TextField
-                        label="Visit Date"
-                        name="visitDate"
-                        type="date"
-                        value={formData.visitDate}
-                        onChange={handleChange}
-                        required
-                        fullWidth
-                        InputLabelProps={{ shrink: true }}
-                        inputProps={{ min: today }}
-                      />
-                    </Grid>
-                    <Grid size={{ xs: 12, md: 3 }}>
-                      <TextField
-                        label="Visit Time"
-                        name="visitTime"
-                        value={formData.visitTime}
-                        onChange={handleChange}
-                        required
-                        fullWidth
-                        select
-                        error={Boolean(slotError)}
-                        disabled={!selectedEmployee || !formData.visitDate || isLoadingSlots || slotOptions.length === 0}
-                        helperText={
-                          slotError ||
-                          (!selectedEmployee || !formData.visitDate
-                            ? 'Select an employee and date first'
-                            : isLoadingSlots
-                              ? 'Loading available slots...'
-                              : availableSlots.length === 0
-                                ? 'No available slots for this date'
-                                : '')
-                        }
-                      >
-                        <MenuItem value="" disabled>
-                          Select a slot
-                        </MenuItem>
-                        {slotOptions.map((slot) => (
-                          <MenuItem key={slot} value={slot} disabled={bookedSlotSet.has(slot)}>
-                            {formatSlotLabel(slot)}
-                          </MenuItem>
-                        ))}
-                      </TextField>
-                    </Grid>
-                    <Grid size={{ xs: 12 }}>
-                      <TextField
-                        label="Purpose"
-                        name="purpose"
-                        value={formData.purpose}
-                        onChange={handleChange}
-                        required
-                        fullWidth
-                        multiline
-                        minRows={3}
-                        inputProps={{ maxLength: 500 }}
-                      />
-                    </Grid>
-                  </Grid>
+                  </Box>
 
                   <Button
                     type="submit"
@@ -306,7 +312,16 @@ const VisitorRequestPage = () => {
                     size="large"
                     startIcon={isSubmitting ? <CircularProgress color="inherit" size={16} /> : <SendIcon />}
                     disabled={isSubmitting || isLoadingSlots}
-                    sx={{ alignSelf: 'flex-start' }}
+                    sx={{
+                      alignSelf: 'flex-start',
+                      px: 4,
+                      py: 1.375,
+                      borderRadius: 2.5,
+                      fontWeight: 700,
+                      background: 'linear-gradient(135deg, #1e3a8a, #2563eb)',
+                      boxShadow: '0 6px 20px rgba(37,99,235,0.4)',
+                      '&:hover': { background: 'linear-gradient(135deg, #1e40af, #1d4ed8)' }
+                    }}
                   >
                     {isSubmitting ? 'Submitting...' : 'Submit Request'}
                   </Button>
